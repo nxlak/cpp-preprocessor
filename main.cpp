@@ -14,10 +14,10 @@ path operator""_p(const char* data, std::size_t sz) {
     return path(data, data + sz);
 }
 
-bool Preprocess_recursive(ifstream& input, ofstream& output, const path& in_file, const vector<path>& include_directories) {
+bool PreprocessRecursive(ifstream& input, ofstream& output, const path& in_file, const vector<path>& include_directories) {
     static regex dir_user(R"/(\s*#\s*include\s*"([^"]*)"\s*)/");
     static regex dir_standard(R"/(\s*#\s*include\s*<([^>]*)>\s*)/");
-    smatch m;
+    smatch match;
 
     string str;
     int string_number = 0;
@@ -26,14 +26,14 @@ bool Preprocess_recursive(ifstream& input, ofstream& output, const path& in_file
         ++string_number;
         path file_path;
         bool is_find = true;
-        if (regex_match(str, m, dir_user)) {
-            string matched_str = m.str(1);
+        if (regex_match(str, match, dir_user)) {
+            string matched_str = match.str(1);
             file_path = in_file.parent_path() / matched_str;
 
             if (filesystem::exists(file_path)) {
                 ifstream new_input(file_path.string(), ios::in);
                 if (new_input.is_open()) {
-                    if (!Preprocess_recursive(new_input, output, file_path, include_directories)) {
+                    if (!PreprocessRecursive(new_input, output, file_path, include_directories)) {
                         return false;
                     }
                     continue;
@@ -48,15 +48,15 @@ bool Preprocess_recursive(ifstream& input, ofstream& output, const path& in_file
                 is_find = false;
             }
         }
-        if (!is_find || regex_match(str, m, dir_standard)) {
+        if (!is_find || regex_match(str, match, dir_standard)) {
             bool is_finded = false;
             for (const auto& dir : include_directories) {
-                string matched_str = m.str(1);
+                string matched_str = match.str(1);
                 file_path = dir / matched_str;
                 if (filesystem::exists(file_path)) {
                     ifstream new_input(file_path.string(), ios::in);
                     if (new_input.is_open()) {
-                        if (!Preprocess_recursive(new_input, output, file_path, include_directories)) {
+                        if (!PreprocessRecursive(new_input, output, file_path, include_directories)) {
                             return false;
                         }
                         is_finded = true;
@@ -96,7 +96,7 @@ bool Preprocess(const path& in_file, const path& out_file, const vector<path>& i
     if (!output) {
         return false;
     }
-    return Preprocess_recursive(input, output, in_file, include_directories);
+    return PreprocessRecursive(input, output, in_file, include_directories);
 }
 
 string GetFileContents(string file) {
